@@ -1,7 +1,7 @@
 import os
 import datetime
 from flask import Flask, jsonify, request
-from online_database import register_user, login_user, get_prs, add_pr, delete_pr
+from online_database import register_user, login_user, get_prs, add_pr, delete_pr, get_exercises
 from dotenv import load_dotenv
 from itsdangerous import URLSafeTimedSerializer, BadSignature
 
@@ -60,6 +60,13 @@ def login():
 
     return jsonify({"token": create_token(user_id)}), 200
 
+@app.get("/exercises")
+def list_exercises():
+    user_id = get_user_id_from_request()
+    if user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify(get_exercises()), 200
+
 @app.get("/prs")
 def list_prs():
     user_id = get_user_id_from_request()
@@ -78,7 +85,6 @@ def create_pr():
     weight = data.get("weight")
     reps = data.get("reps")
     date = data.get("date") or datetime.date.today().isoformat()
-    
     if not isinstance(date, str):
         return jsonify({"error": "date must be a string (YYYY-MM-DD)"}), 400
 

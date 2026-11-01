@@ -197,6 +197,24 @@ def add_exercises():
     cur.close()
     conn.close()
 
+def get_exercises():
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, name, muscle_group
+            FROM exercises ORDER BY name
+            """,
+        )
+        rows = cur.fetchall()
+        cur.close()
+    finally:
+        conn.close()
+    return [
+    {"id": id_, "name": name, "muscle_group": group}
+    for id_, name, group in rows
+]
 
 # USERS
 
