@@ -224,7 +224,7 @@ def register_user(username, password):
         conn.close()
 
 
-def login(username, password):
+def login_user(username, password):
     username = username.strip().lower()
     conn = get_connection()
     try:
