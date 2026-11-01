@@ -1,6 +1,7 @@
 import os
+import datetime
 from flask import Flask, jsonify, request
-from online_database import register_user, login_user
+from online_database import register_user, login_user, get_prs, add_pr, delete_pr
 from dotenv import load_dotenv
 from itsdangerous import URLSafeTimedSerializer, BadSignature
 
@@ -58,6 +59,51 @@ def login():
         return jsonify({"error": "Invalid username or password"}), 401
 
     return jsonify({"token": create_token(user_id)}), 200
+
+@app.get("/prs")
+def list_prs():
+    user_id = get_user_id_from_request()
+    if user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify(get_prs(user_id)), 200
+
+@app.post("/prs")
+def create_pr():
+    user_id = get_user_id_from_request()
+    if user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    exercise_id = data.get("exercise_id")
+    weight = data.get("weight")
+    reps = data.get("reps")
+    date = data.get("date") or datetime.date.today().isoformat()
+    
+    if not isinstance(date, str):
+        return jsonify({"error": "date must be a string (YYYY-MM-DD)"}), 400
+
+    if not isinstance(exercise_id, int) or not isinstance(reps, int):
+        return jsonify({"error": "exercise_id and reps must be integers"}), 400
+    if not isinstance(weight, (int, float)):
+        return jsonify({"error": "weight must be a number"}), 400
+    if weight < 0 or reps <= 0 or reps > 99:
+        return jsonify({"error": "weight must be 0 or more and reps between 1 and 99"}), 400
+
+    try:
+        pr_id = add_pr(user_id, exercise_id, weight, reps, date)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    return jsonify({"pr_id": pr_id}), 201
+
+@app.delete("/prs/<int:pr_id>")
+def remove_pr(pr_id):
+    user_id = get_user_id_from_request()
+    if user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+    if not delete_pr(pr_id, user_id):
+        return jsonify({"error": "PR not found"}), 404
+    return jsonify({"deleted": True}), 200
 
 
 @app.get("/health")
