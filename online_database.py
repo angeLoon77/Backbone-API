@@ -216,6 +216,40 @@ def get_exercises():
     for id_, name, group in rows
 ]
 
+def get_prs_by_muscle_group(user_id, muscle_group):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT exercises.name, prs.weight, prs.reps, prs.date
+            FROM prs JOIN exercises ON prs.exercise_id = exercises.id
+            WHERE prs.user_id = %s AND exercises.muscle_group = %s
+            ORDER BY prs.weight, prs.reps
+            """,
+            (user_id, muscle_group),
+        )
+        rows = cur.fetchall()
+        cur.close()
+    finally:
+        conn.close()
+    return rows
+
+def delete_prs_by_exercise(user_id, exercise_id):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM prs WHERE user_id = %s AND exercise_id = %s",
+            (user_id, exercise_id),
+        )
+        deleted = cur.rowcount
+        conn.commit()
+        cur.close()
+        return deleted
+    finally:
+        conn.close()
+
 # USERS
 
 def register_user(username, password):

@@ -2,3 +2,4 @@
 __pycache__/
 .env
 test-api.py
+requirements.txt

@@ -1,0 +1,9 @@
+.env
+.venv/
+__pycache__/
+Dockerfile
+compose.yaml
+.git
+.gitignore
+test-api.py
+README.md

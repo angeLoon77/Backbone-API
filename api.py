@@ -1,7 +1,10 @@
 import os
 import datetime
 from flask import Flask, jsonify, request
-from online_database import register_user, login_user, get_prs, add_pr, delete_pr, get_exercises
+from online_database import (
+    register_user, login_user, get_prs, add_pr, delete_pr, get_exercises,
+    get_prs_by_muscle_group, delete_prs_by_exercise,
+)
 from dotenv import load_dotenv
 from itsdangerous import URLSafeTimedSerializer, BadSignature
 
@@ -74,6 +77,17 @@ def list_prs():
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify(get_prs(user_id)), 200
 
+@app.get("/prs/group/<muscle_group>")
+def list_prs_by_group(muscle_group):
+    user_id = get_user_id_from_request()
+    if user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+    rows = get_prs_by_muscle_group(user_id, muscle_group)
+    return jsonify([
+        {"name": name, "weight": weight, "reps": reps, "date": date.isoformat()}
+        for name, weight, reps, date in rows
+    ]), 200
+
 @app.post("/prs")
 def create_pr():
     user_id = get_user_id_from_request()
@@ -111,6 +125,14 @@ def remove_pr(pr_id):
         return jsonify({"error": "PR not found"}), 404
     return jsonify({"deleted": True}), 200
 
+@app.delete("/exercises/<int:exercise_id>/prs")
+def remove_prs_by_exercise(exercise_id):
+    user_id = get_user_id_from_request()
+    if user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+    deleted = delete_prs_by_exercise(user_id, exercise_id)
+    return jsonify({"deleted": deleted}), 200
+
 
 @app.get("/health")
 def health():
@@ -125,4 +147,6 @@ def me():
 
 
 if __name__ == "__main__":
-    app.run(debug=os.getenv("FLASK_DEBUG") == "1")
+    debug = os.getenv("FLASK_DEBUG") == "1"
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=debug)
