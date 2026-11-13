@@ -18,7 +18,7 @@ Docker Compose: Containerized environment structure.
 
 API Endpoints
 
-The API is currently live at https://backbone-api-txsn.onrender.com.
+The API is currently live Hosted by Render
 
 Authentication
 
