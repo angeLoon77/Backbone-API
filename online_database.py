@@ -129,6 +129,7 @@ def init_db():
     create_exercise_table()
     create_users_table()
     create_prs_table()
+    create_parser_failure_table()
     add_exercises()
 
 
@@ -184,6 +185,36 @@ def create_prs_table():
     cur.close()
     conn.close()
 
+def create_parser_failure_table():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS parser_failure
+        (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        raw_text TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+        """)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def log_parser_failure(user_id, raw_text, reason):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO parser_failure (user_id, raw_text, reason) VALUES (%s, %s, %s)",
+            (user_id, raw_text, reason),
+        )
+        conn.commit()
+        cur.close()
+    finally:
+        conn.close()
 
 def add_exercises():
     conn = get_connection()

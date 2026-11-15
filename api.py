@@ -3,7 +3,7 @@ import datetime
 from flask import Flask, jsonify, request
 from online_database import (
     register_user, login_user, get_prs, add_pr, delete_pr, get_exercises,
-    get_prs_by_muscle_group, delete_prs_by_exercise,
+    get_prs_by_muscle_group, delete_prs_by_exercise,log_parser_failure
 )
 from dotenv import load_dotenv
 from itsdangerous import URLSafeTimedSerializer, BadSignature
@@ -116,6 +116,35 @@ def create_pr():
 
     return jsonify({"pr_id": pr_id}), 201
 
+MAX_RAW_TEXT = 10_000
+MAX_REASON = 200
+
+@app.post("/parser-failures")
+def post_parser_failure():
+    user_id = get_user_id_from_request()
+    if user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    raw_text = data.get("raw_text")
+    reason = data.get("reason")
+
+    if not isinstance(raw_text, str) or not isinstance(reason, str):
+        return jsonify({"error": "raw_text and reason must be strings"}), 400
+    if not raw_text.strip() or not reason.strip():
+        return jsonify({"error": "raw_text and reason must not be empty"}), 400
+    if "\x00" in raw_text or "\x00" in reason:
+        return jsonify({"error": "invalid characters"}), 400
+    if len(raw_text) > MAX_RAW_TEXT or len(reason) > MAX_REASON:
+        return jsonify({"error": "payload too large"}), 413
+
+    try:
+        log_parser_failure(user_id, raw_text, reason)
+    except Exception:
+        app.logger.exception("failed to log parser failure")
+        return jsonify({"error": "internal error"}), 500
+
+    return jsonify({"logged": True}), 201
 @app.delete("/prs/<int:pr_id>")
 def remove_pr(pr_id):
     user_id = get_user_id_from_request()
