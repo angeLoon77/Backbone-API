@@ -111,7 +111,7 @@ The host runs the last deployed commit, so a new route only exists after a new d
 - [x] Routes for PRs by muscle group and for deleting all PRs of an exercise
 - [x] Hosted on Render
 - [x] Parser feedback: `POST /parser-failures` and the `parser_failure` table
-- [ ] Monthly cleanup of parser feedback older than 30 days (`DELETE FROM parser_failure WHERE date < now() - interval '30 days'`)
+- [x] Automatic cleanup of parser feedback older than 60 days (`DELETE FROM parser_failure WHERE date < now() - interval '30 days'`)
 - [ ] Limit how many parser reports one user can send per day
 - [ ] Routes for the workout log, so it can move from the device's JSON file to the database
 

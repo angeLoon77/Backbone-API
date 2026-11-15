@@ -2,6 +2,7 @@ import os
 import psycopg2
 import datetime
 import bcrypt
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -213,6 +214,25 @@ def log_parser_failure(user_id, raw_text, reason):
         )
         conn.commit()
         cur.close()
+    finally:
+        conn.close()
+    try:
+        delete_old_parser_failures()
+    except Exception:
+        logging.exception("failed to delete old parser failures")
+
+def delete_old_parser_failures(days=60):
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM parser_failure WHERE date < now() - make_interval(days => %s)",
+            (int(days),),
+        )
+        deleted = cur.rowcount
+        conn.commit()
+        cur.close()
+        return deleted
     finally:
         conn.close()
 
