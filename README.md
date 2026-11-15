@@ -51,52 +51,6 @@ Errors are JSON in the form `{"error": "message"}`.
 
 Tables are created with `CREATE TABLE IF NOT EXISTS` functions in the data layer, for example `create_parser_failure_table()`. Run them once at setup, not on every request.
 
-## Running locally
-
-You need Python 3 and a PostgreSQL database (a free Neon project works).
-
-1. Clone the repo and install the dependencies:
-
-   ```bash
-   git clone https://github.com/angeLoon77/backbone-api.git
-   cd backbone-api
-   python -m venv venv
-   source venv/bin/activate   # on Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-
-2. Create a `.env` file in the project root and **never commit it**:
-
-   ```
-   DATABASE_URL=your Neon connection string
-   SECRET_KEY=a long random string used to sign tokens
-   ```
-
-3. Create the tables by running the `create_..._table()` functions once.
-
-4. Start the server:
-
-   ```bash
-   python app.py
-   ```
-
-## Trying it
-
-Bash syntax, with `BASE_URL` pointing to your local server or to the hosted instance:
-
-```bash
-BASE_URL=http://localhost:5000
-
-# create an account, then log in (the response has the token)
-curl -X POST "$BASE_URL/register" -H "Content-Type: application/json" -d '{"username": "demo", "password": "demo123"}'
-curl -X POST "$BASE_URL/login" -H "Content-Type: application/json" -d '{"username": "demo", "password": "demo123"}'
-
-# use the token on the other routes
-TOKEN="paste-the-token-here"
-curl "$BASE_URL/exercises" -H "Authorization: Bearer $TOKEN"
-curl "$BASE_URL/prs" -H "Authorization: Bearer $TOKEN"
-```
-
 ## Parser feedback
 
 `POST /parser-failures` receives the text of workouts that the app's parser couldn't fully understand, so the parser and the exercise list can be improved. The app calls it in the background and ignores the result, so a failure here never affects the user. The reasons the app sends (`unknown_exercise: <name>`, `no_exercises`, `no_sets: <name>`, `invalid_date` and `parse_error: ...`) are described in the [app's README](https://github.com/angeLoon77/Backbone-APP#parser-feedback).
@@ -120,20 +74,6 @@ Content-Type: application/json
 | `500` | `{"error": "internal error"}` | The insert failed. The details go to the server log, never to the client |
 
 The limits are the `MAX_RAW_TEXT` (10,000) and `MAX_REASON` (200) constants. They are checked in the route, before the database, and `MAX_RAW_TEXT` matches the app's own `MAX_WORKOUT_LENGTH`.
-
-### The `parser_failure` table
-
-```sql
-CREATE TABLE IF NOT EXISTS parser_failure
-(
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    raw_text TEXT NOT NULL,
-    reason TEXT NOT NULL,
-    date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-)
-```
 
 | Column | Meaning |
 | --- | --- |
