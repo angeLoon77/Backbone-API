@@ -6,8 +6,10 @@ from online_database import (
     get_prs_by_muscle_group, delete_prs_by_exercise,log_parser_failure
 )
 from dotenv import load_dotenv
+import online_database as db
 from itsdangerous import URLSafeTimedSerializer, BadSignature
 
+db.init_db()
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
