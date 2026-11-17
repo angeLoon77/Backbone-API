@@ -129,6 +129,7 @@ def init_db():
     create_prs_table()
     create_parser_failure_table()
     add_exercises()
+    add_preferred_language_column()
 
 # CREATE EXERCISE TABLE
 
@@ -415,6 +416,19 @@ def delete_pr(pr_id, user_id):
         return deleted
     finally:
         conn.close()
+
+# ADD PREFERRED LANGUAGE COLUMN TO USERS TABLE
+
+def add_preferred_language_column():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(5) NOT NULL DEFAULT 'en'
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 if __name__ == "__main__":
