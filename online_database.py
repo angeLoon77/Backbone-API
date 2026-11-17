@@ -123,9 +123,6 @@ def get_connection():
         raise RuntimeError("DATABASE_URL not found on .env")
     return psycopg2.connect(database_url)
 
-
-# CREATE TABLES 
-
 def init_db():
     create_exercise_table()
     create_users_table()
@@ -133,6 +130,7 @@ def init_db():
     create_parser_failure_table()
     add_exercises()
 
+# CREATE EXERCISE TABLE
 
 def create_exercise_table():
     conn = get_connection()
@@ -149,6 +147,7 @@ def create_exercise_table():
     cur.close()
     conn.close()
 
+# CREATE USERS TABLE
 
 def create_users_table():
     conn = get_connection()
@@ -158,13 +157,15 @@ def create_users_table():
         (
         id SERIAL PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
-        hash TEXT NOT NULL
+        hash TEXT NOT NULL,
+        preferred_language VARCHAR(5) NOT NULL DEFAULT 'en'
         )
         """)
     conn.commit()
     cur.close()
     conn.close()
 
+# CREATE PRs TABLE
 
 def create_prs_table():
     conn = get_connection()
@@ -185,6 +186,8 @@ def create_prs_table():
     conn.commit()
     cur.close()
     conn.close()
+
+# CREATE LOG TABLE FOR PARSER FAILURES / LOG FAILURES INTO DB / DELETE FAILURES OLDER THAN 60 DAYS
 
 def create_parser_failure_table():
     conn = get_connection()
@@ -235,6 +238,8 @@ def delete_old_parser_failures(days=60):
         return deleted
     finally:
         conn.close()
+
+# ADD EXERCISES / GET EXERCISES / GET PRS BY MUSCLE GROUP / DELETE PRS BY EXERCISE
 
 def add_exercises():
     conn = get_connection()
@@ -301,7 +306,7 @@ def delete_prs_by_exercise(user_id, exercise_id):
     finally:
         conn.close()
 
-# USERS
+# REGISTER USER / LOGIN USER
 
 def register_user(username, password):
     username = username.strip().lower()
@@ -347,7 +352,7 @@ def login_user(username, password):
     return None
 
 
-# PRS
+# GET PRS / ADD PR / DELETE PR
 
 def get_prs(user_id):
     conn = get_connection()
