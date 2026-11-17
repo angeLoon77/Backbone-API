@@ -416,5 +416,27 @@ def delete_pr(pr_id, user_id):
     finally:
         conn.close()
 
+# USER PREFERRED LANGUAGE
+
+def get_user_language(user_id: int) -> str:
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT preferred_language FROM users WHERE id = %s", (user_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return row[0] if row else "en"
+
+def update_user_language(user_id: int, language: str) -> None:
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE users SET preferred_language = %s WHERE id = %s",
+        (language, user_id),
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
 if __name__ == "__main__":
     init_db()

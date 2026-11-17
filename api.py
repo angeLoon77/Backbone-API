@@ -3,13 +3,12 @@ import datetime
 from flask import Flask, jsonify, request
 from online_database import (
     register_user, login_user, get_prs, add_pr, delete_pr, get_exercises,
-    get_prs_by_muscle_group, delete_prs_by_exercise,log_parser_failure
+    get_prs_by_muscle_group, delete_prs_by_exercise,log_parser_failure,
+    get_user_language, update_user_language
 )
 from dotenv import load_dotenv
-import online_database as db
 from itsdangerous import URLSafeTimedSerializer, BadSignature
 
-db.init_db()
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -17,7 +16,7 @@ if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY not found on .env")
 
 serializer = URLSafeTimedSerializer(SECRET_KEY)
-TOKEN_MAX_AGE = 60 * 60 * 24  # 1 day in seconds
+TOKEN_MAX_AGE = 60 * 60 * 24 * 30  # 30 days in seconds
 
 def create_token(user_id):
     return serializer.dumps(user_id)
@@ -33,6 +32,8 @@ def get_user_id_from_request():
         return None
 
 app = Flask(__name__)
+
+# Endpoint to register a new user
 
 @app.post("/register")
 def register():
@@ -51,6 +52,8 @@ def register():
 
     return jsonify({"user_id": user_id}), 201
 
+# Endpoint to login a user and return a token and preferred language
+
 @app.post("/login")
 def login():
     data = request.get_json(silent=True) or {}
@@ -63,7 +66,10 @@ def login():
     if user_id is None:
         return jsonify({"error": "Invalid username or password"}), 401
 
-    return jsonify({"token": create_token(user_id)}), 200
+    return jsonify({
+        "token": create_token(user_id),
+        "preferred_language": get_user_language(user_id)
+    }), 200
 
 @app.get("/exercises")
 def list_exercises():
@@ -72,12 +78,16 @@ def list_exercises():
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify(get_exercises()), 200
 
+# Endpoint to list PRs for the current user
+
 @app.get("/prs")
 def list_prs():
     user_id = get_user_id_from_request()
     if user_id is None:
         return jsonify({"error": "Unauthorized"}), 401
     return jsonify(get_prs(user_id)), 200
+
+# Endpoint to list PRs by muscle group
 
 @app.get("/prs/group/<muscle_group>")
 def list_prs_by_group(muscle_group):
@@ -89,6 +99,8 @@ def list_prs_by_group(muscle_group):
         {"name": name, "weight": weight, "reps": reps, "date": date.isoformat()}
         for name, weight, reps, date in rows
     ]), 200
+
+# Endpoint to create a new PR
 
 @app.post("/prs")
 def create_pr():
@@ -121,6 +133,8 @@ def create_pr():
 MAX_RAW_TEXT = 10_000
 MAX_REASON = 200
 
+# Endpoint to log parser failures
+
 @app.post("/parser-failures")
 def post_parser_failure():
     user_id = get_user_id_from_request()
@@ -147,6 +161,9 @@ def post_parser_failure():
         return jsonify({"error": "internal error"}), 500
 
     return jsonify({"logged": True}), 201
+
+# DELETE endpoints for PRs
+
 @app.delete("/prs/<int:pr_id>")
 def remove_pr(pr_id):
     user_id = get_user_id_from_request()
@@ -164,18 +181,43 @@ def remove_prs_by_exercise(exercise_id):
     deleted = delete_prs_by_exercise(user_id, exercise_id)
     return jsonify({"deleted": deleted}), 200
 
+# Health check endpoint
 
 @app.get("/health")
 def health():
     return jsonify({"status": "ok"})
+
+# Endpoint to get the current user's ID and preferred language
 
 @app.get("/me")
 def me():
     user_id = get_user_id_from_request()
     if user_id is None:
         return jsonify({"error": "Unauthorized"}), 401
-    return jsonify({"user_id": user_id}), 200
+    return jsonify({
+        "user_id": user_id,
+        "preferred_language": get_user_language(user_id)
+    }), 200
 
+ALLOWED_LANGUAGES = {"en","de","pt"}
+
+@app.patch("/users/language")
+def set_user_language():
+    user_id = get_user_id_from_request()
+    if user_id is None:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    language = data.get("language")
+    if not isinstance(language, str):
+        return jsonify({"error": "language must be a string"}), 400
+
+    language = language.strip().lower()
+    if language not in ALLOWED_LANGUAGES:
+        return jsonify({"error": "Unsupported language"}), 400
+
+    update_user_language(user_id, language)
+    return jsonify({"preferred_language": language}), 200
 
 if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG") == "1"
